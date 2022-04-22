@@ -18,7 +18,7 @@
 
 function add_author_support_to_products()
 {
-    add_post_type_support('product', 'author');
+  //  add_post_type_support('product', 'author');
 }
 add_action('init', 'add_author_support_to_products');
 
@@ -45,18 +45,29 @@ function bafmw_book_author_products($atts = array(), $content = null, $tag = '')
         $tag
     );
 
+
+ 
+
+
     $args = array(
         'post_type' => 'product',
-        'author' => $atts['user_id'],
-        'posts_per_page' => -1,
-        'limit' => '-1',
-        'offset' => 0,
-        'fields' => 'ids'
-
-    );
+        'posts_per_page' => 10,
+        'post_status' => array('publish', 'pending', 'draft', 'auto-draft', 'future', 'private', 'inherit', 'trash'),   
+        'fields' => 'ids',
+        'meta_query' => array(
+          array(
+            'key' => 'author',
+            'value' => $author->ID,
+            'compare' => 'LIKE'
+          )
+        )
+      );
+	
     $product_ids = get_posts($args);
+
+
+	//	var_dump( $query->request );
     $atts['ids'] = implode(",", $product_ids);
-    $atts['limit'] = 10;
     $o_shortcode_atts = " ";
 
 
@@ -67,10 +78,11 @@ function bafmw_book_author_products($atts = array(), $content = null, $tag = '')
         }
     }
     trim($o_shortcode_atts, " ");
-
+if( $atts['ids']){
     return '<h2 style="padding-top:1rem;">' . __('Bücher von ', 'bafmw_book_exensions') . $author->display_name . '</h2>' .
         do_shortcode('[products ' . $o_shortcode_atts . ']');
 }
+	}
 // register shortcode
 add_shortcode('bafmw_products', 'bafmw_book_author_products');
 
@@ -80,4 +92,25 @@ add_action('TieLabs/after_archive_title', 'lwm_products');
 function lwm_products()
 {
     echo  do_shortcode('[bafmw_products]');
+}
+
+remove_filter('pre_user_description', 'wp_filter_kses');
+
+
+
+
+/* woocommerce_product_meta_start */
+
+add_action('woocommerce_product_meta_start', 'add_author_box');
+function add_author_box(){
+    global $post;
+    $authors = get_field('author', $post->ID);
+    if($authors ):
+    echo '<span>'.__('Autoren','bafmw_book_exensions').':';
+    foreach($authors as $author){
+        $template = '<a href="%s"/>%s</a> ';
+        echo sprintf($template,get_author_posts_url($author['ID']), $author['name']  );
+    }
+    echo '</span>';
+endif;
 }
